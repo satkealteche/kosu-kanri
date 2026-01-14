@@ -1,2 +1,5 @@
 flask
 gunicorn
+msal
+requests
+python-dateutil
