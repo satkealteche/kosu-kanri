@@ -52,17 +52,22 @@ def main():
 
         st.header("📁 データ取込")
         uploaded_file = st.file_uploader(
-            "仕訳帳CSV（弥生会計）",
-            type=['csv'],
-            help="弥生会計からエクスポートした仕訳日記帳CSVをアップロードしてください"
+            "仕訳帳（弥生会計）",
+            type=['csv', 'xls', 'xlsx'],
+            help="弥生会計からエクスポートした仕訳日記帳（CSV/XLS/XLSX）をアップロードしてください"
         )
 
-        encoding = st.selectbox(
-            "文字コード",
-            options=['cp932', 'utf-8', 'shift_jis'],
-            index=0,
-            help="通常は'cp932'（Shift-JIS）です"
-        )
+        # CSVの場合のみ文字コード選択を表示
+        encoding = 'cp932'
+        if uploaded_file is not None:
+            file_ext = uploaded_file.name.split('.')[-1].lower()
+            if file_ext == 'csv':
+                encoding = st.selectbox(
+                    "文字コード",
+                    options=['cp932', 'utf-8', 'shift_jis'],
+                    index=0,
+                    help="通常は'cp932'（Shift-JIS）です"
+                )
 
         if uploaded_file is not None:
             if st.button("📥 データ読込", type="primary"):
@@ -76,11 +81,11 @@ def main():
 
 
 def load_data(uploaded_file, encoding: str, fiscal_year_end: int):
-    """CSVデータを読み込む"""
+    """仕訳データを読み込む（CSV/XLS/XLSX対応）"""
     try:
         with st.spinner("データを読み込んでいます..."):
             parser = YayoiParser(fiscal_year_end_month=fiscal_year_end)
-            df, meta = parser.parse_csv(uploaded_file, encoding=encoding)
+            df, meta = parser.parse(uploaded_file, encoding=encoding)
 
             st.session_state.df = df
             st.session_state.meta = meta
@@ -111,15 +116,16 @@ def load_data(uploaded_file, encoding: str, fiscal_year_end: int):
 
 def display_welcome():
     """初期画面"""
-    st.info("👈 サイドバーからCSVファイルをアップロードしてください")
+    st.info("👈 サイドバーからファイルをアップロードしてください")
 
     with st.expander("📖 使い方", expanded=True):
         st.markdown("""
         ### 1. データの準備
-        弥生会計から「仕訳日記帳」をCSV形式でエクスポートしてください。
+        弥生会計から「仕訳日記帳」をエクスポートしてください。
+        - **対応形式**: CSV / XLS / XLSX
 
         ### 2. ファイルのアップロード
-        左のサイドバーからCSVファイルをアップロードします。
+        左のサイドバーからファイルをアップロードします。
 
         ### 3. 分析
         - **月次推移表**: 勘定科目別の月次推移を確認
