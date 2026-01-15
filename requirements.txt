@@ -1,2 +1,7 @@
 flask
 gunicorn
+streamlit
+pandas
+plotly
+openpyxl
+numpy
