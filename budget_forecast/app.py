@@ -4,9 +4,7 @@ Phase 1: CSV取込 + 月次推移表
 """
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from io import StringIO
+from io import BytesIO
 import sys
 import os
 
@@ -210,13 +208,11 @@ def display_monthly_summary():
     totals = monthly_summary.loc['合計']
     col1, col2 = st.columns([3, 1])
     with col1:
-        fig = px.bar(
-            x=[str(p) for p in totals.index],
-            y=totals.values,
-            labels={'x': '年月', 'y': '金額'},
-        )
-        fig.update_layout(height=300)
-        st.plotly_chart(fig, use_container_width=True)
+        # Streamlit組み込みグラフを使用
+        chart_data = pd.DataFrame({
+            '金額': totals.values
+        }, index=[str(p) for p in totals.index])
+        st.bar_chart(chart_data)
     with col2:
         st.metric("期間合計", f"¥{totals.sum():,.0f}")
         st.metric("月平均", f"¥{totals.mean():,.0f}")
@@ -235,7 +231,7 @@ def display_charts():
     # グラフタイプ選択
     chart_type = st.radio(
         "グラフタイプ",
-        options=["積み上げ棒グラフ", "折れ線グラフ", "エリアチャート"],
+        options=["棒グラフ", "折れ線グラフ", "エリアチャート"],
         horizontal=True
     )
 
@@ -244,7 +240,8 @@ def display_charts():
     selected = st.multiselect(
         "表示する勘定科目（最大10個推奨）",
         options=all_accounts,
-        default=all_accounts[:5] if len(all_accounts) > 5 else all_accounts
+        default=all_accounts[:5] if len(all_accounts) > 5 else all_accounts,
+        key="chart_accounts"
     )
 
     if not selected:
@@ -255,30 +252,13 @@ def display_charts():
     plot_df = monthly_summary.loc[selected].T
     plot_df.index = plot_df.index.astype(str)
 
-    # グラフ描画
-    if chart_type == "積み上げ棒グラフ":
-        fig = px.bar(
-            plot_df,
-            barmode='stack',
-            labels={'value': '金額', 'index': '年月'}
-        )
+    # グラフ描画（Streamlit組み込み）
+    if chart_type == "棒グラフ":
+        st.bar_chart(plot_df)
     elif chart_type == "折れ線グラフ":
-        fig = px.line(
-            plot_df,
-            markers=True,
-            labels={'value': '金額', 'index': '年月'}
-        )
+        st.line_chart(plot_df)
     else:
-        fig = px.area(
-            plot_df,
-            labels={'value': '金額', 'index': '年月'}
-        )
-
-    fig.update_layout(
-        height=500,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02)
-    )
-    st.plotly_chart(fig, use_container_width=True)
+        st.area_chart(plot_df)
 
 
 def display_detail():
@@ -358,8 +338,6 @@ def display_export():
 
     # Excel出力
     st.markdown("### 📊 Excel形式")
-
-    from io import BytesIO
 
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
